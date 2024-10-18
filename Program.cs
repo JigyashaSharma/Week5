@@ -13,6 +13,9 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<IndustryConnectWeek2Context>(option =>
     option.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnectionString")));
 
+//required for patch tyo work
+ builder.Services.AddControllers().AddNewtonsoftJson();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
