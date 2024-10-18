@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using IndustryConnect_Week5_WebApi.Models;
+using IndustryConnect_Week5_WebApi.Dtos;
+using IndustryConnect_Week5_WebApi.Mappers;
 
 namespace IndustryConnect_Week5_WebApi.Controllers
 {
@@ -22,36 +24,60 @@ namespace IndustryConnect_Week5_WebApi.Controllers
 
         // GET: api/Sale
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Sale>>> GetSales()
+        public async Task<ActionResult<IEnumerable<SaleDto>>> GetSales()
         {
-            return await _context.Sales.Include(p => p.Product)
-                .Include(c => c.Customer).ToListAsync();
+            try
+            {
+                var sale = await _context.Sales.Include(p => p.Product)
+                .Include(c => c.Customer)
+                .Include(st => st.Store)
+                .Select(s => SaleMapper.EntityToSaleDto(s))
+                .ToListAsync();
+
+                return Ok(sale);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         // GET: api/Sale/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Sale>> GetSale(int id)
+        public async Task<ActionResult<SaleDto>> GetSale(int id)
         {
-            var sale = await _context.Sales.FindAsync(id);
-
-            if (sale == null)
+            try
             {
-                return NotFound();
-            }
+                var sale = await _context.Sales
+                .Include(p => p.Product)
+                .Include(c => c.Customer)
+                .Include(st => st.Store)
+                .FirstOrDefaultAsync(s => s.Id == id);
 
-            return sale;
+                if (sale == null)
+                {
+                    return NotFound();
+                }
+
+                return Ok(SaleMapper.EntityToSaleDto(sale));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         // PUT: api/Sale/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutSale(int id, Sale sale)
+        public async Task<ActionResult<SaleDto>> PutSale(int id, SaleDto saleDto)
         {
-            if (id != sale.Id)
+            if (id != saleDto.Id)
             {
                 return BadRequest();
             }
 
+            var sale = SaleMapper.SaleDtoToEntity(saleDto);
             _context.Entry(sale).State = EntityState.Modified;
 
             try
@@ -70,34 +96,74 @@ namespace IndustryConnect_Week5_WebApi.Controllers
                 }
             }
 
-            return NoContent();
+            var createdSale = await _context.Sales
+                   .Include(s => s.Customer)
+                   .Include(s => s.Product)
+                   .Include(s => s.Store)
+                   .FirstOrDefaultAsync(s => s.Id == sale.Id);
+
+            if (createdSale == null)
+            {
+                return BadRequest();
+            }
+            saleDto = SaleMapper.EntityToSaleDto(createdSale);
+
+            return Ok(saleDto);
         }
 
         // POST: api/Sale
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Sale>> PostSale(Sale sale)
+        public async Task<ActionResult<SaleDto>> PostSale(SaleDto saleDto)
         {
-            _context.Sales.Add(sale);
-            await _context.SaveChangesAsync();
+            try
+            {
+                var sale = SaleMapper.SaleDtoToEntity(saleDto);
+                _context.Sales.Add(sale);
+                await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetSale", new { id = sale.Id }, sale);
+                var createdSale = await _context.Sales
+                    .Include(s => s.Customer)
+                    .Include(s => s.Product)
+                    .Include(s => s.Store)
+                    .FirstOrDefaultAsync(s => s.Id == sale.Id);
+
+                if (createdSale == null)
+                {
+                    return BadRequest();
+                }
+                saleDto = SaleMapper.EntityToSaleDto(createdSale);
+
+                return CreatedAtAction("GetSale", new { id = sale.Id }, saleDto);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            
         }
 
         // DELETE: api/Sale/5
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteSale(int id)
+        public async Task<ActionResult<string>> DeleteSale(int id)
         {
-            var sale = await _context.Sales.FindAsync(id);
-            if (sale == null)
+            try
             {
-                return NotFound();
+                var sale = await _context.Sales.FindAsync(id);
+                if (sale == null)
+                {
+                    return NotFound();
+                }
+
+                _context.Sales.Remove(sale);
+                await _context.SaveChangesAsync();
+
+                return $"Sale with ID: {id} deleted successfully!!!!";
             }
-
-            _context.Sales.Remove(sale);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         private bool SaleExists(int id)
