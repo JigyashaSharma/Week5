@@ -47,7 +47,7 @@ namespace IndustryConnect_Week5_WebApi.Controllers
         // PUT: api/Customer/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutCustomer(int id, Customer customer)
+        public async Task<ActionResult<Customer>> PutCustomer(int id, Customer customer)
         {
             if (id != customer.Id)
             {
@@ -72,7 +72,7 @@ namespace IndustryConnect_Week5_WebApi.Controllers
                 }
             }
 
-            return NoContent();
+            return customer;
         }
 
         // POST: api/Customer
@@ -88,7 +88,7 @@ namespace IndustryConnect_Week5_WebApi.Controllers
 
         // DELETE: api/Customer/5
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteCustomer(int id)
+        public async Task<ActionResult<string>> DeleteCustomer(int id)
         {
             var customer = await _context.Customers.FindAsync(id);
             if (customer == null)
@@ -99,7 +99,7 @@ namespace IndustryConnect_Week5_WebApi.Controllers
             _context.Customers.Remove(customer);
             await _context.SaveChangesAsync();
 
-            return NoContent();
+            return $"Customer with ID: {id} deleted successfully!!!";
         }
 
         private bool CustomerExists(int id)
